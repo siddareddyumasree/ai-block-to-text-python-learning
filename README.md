@@ -139,9 +139,7 @@ StackOverflow Python question-answer dataset
 Kaggle beginner Python problems dataset  
 Custom dataset of beginner programming mistakes
 
-The final dataset included approximately:
-55,000 – 60,000 training samples
-
+You can access the dataset from here: https://huggingface.co/datasets/uma-siddareddy/phi2-block-to-text-python-education-dataset 
 
 The custom dataset focused on common beginner errors such as:
 
@@ -179,7 +177,13 @@ Training duration:
 
 The final merged model size is approximately **11–12 GB**.
 
+Model is availabe at: https://huggingface.co/uma-siddareddy/phi-2-block-t0-text-python-learning 
+
 ---
+
+# System Fine-tuning workflow
+
+<img width="470" height="856" alt="image" src="https://github.com/user-attachments/assets/617eb406-5b62-40d1-8f74-b83e7e3690aa" />
 
 # Evaluation
 
@@ -199,14 +203,6 @@ Manual evaluation assessed:
 - age-appropriate language
 - minimal response verbosity
 
----
-
-# Installation
-
-Clone the repository
-git clone https://github.com/yourusername/ai-block-to-text-python-learning.git
-
-
 
 ---
 
@@ -219,6 +215,8 @@ git clone https://github.com/yourusername/ai-block-to-text-python-learning.git
 5. Code runs in the browser using Pyodide  
 6. AI chatbot provides debugging help if needed  
 7. Solutions are saved to the database
+
+
 
 ---
 
