@@ -1,0 +1,28 @@
+body {
+    background-color: #f5f7fa;
+    font-family: 'Poppins', sans-serif;
+}
+
+.navbar {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#blocklyDiv {
+    height: 500px;
+    background: white;
+    border: 1px solid #ced4da;
+    margin-bottom: 20px;
+}
+
+textarea {
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    background-color: #fff;
+    height: 300px;
+}
+
+button {
+    margin-right: 10px;
+}
