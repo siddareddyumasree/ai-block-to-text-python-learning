@@ -1,0 +1,175 @@
+{% include 'header.html' %}
+
+<div class="container mt-4">
+  <h2 class="text-center mb-4">Blockly Python Solver</h2>
+
+  <div id="status" class="small mb-2"></div>
+
+  <div id="blocklyDiv" style="height: 500px; width: 100%;" class="bg-white rounded shadow-sm"></div>
+
+  <xml id="toolbox" style="display: none">
+    <category name="Logic" colour="#5C81A6">
+      <block type="controls_if"></block>
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="logic_boolean"></block>
+      <block type="logic_null"></block>
+    </category>
+    <category name="Loops" colour="#5CA65C">
+      <block type="controls_repeat_ext">
+        <value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
+      </block>
+      <block type="controls_whileUntil"></block>
+      <block type="controls_for"></block>
+    </category>
+    <category name="Math" colour="#5C68A6">
+      <block type="math_number"></block>
+      <block type="math_arithmetic"></block>
+      <block type="math_modulo"></block>
+      <block type="math_round"></block>
+    </category>
+    <category name="Text" colour="#5CA68D">
+      <block type="text"></block>
+      <block type="text_print"></block>
+      <block type="text_join"></block>
+    </category>
+    <category name="Lists" colour="#5CA699">
+      <block type="lists_create_with"></block>
+      <block type="lists_length"></block>
+      <block type="lists_getIndex"></block>
+    </category>
+    <category name="Variables" colour="#A65C81" custom="VARIABLE"></category>
+    <category name="Functions" colour="#9A5CA6" custom="PROCEDURE"></category>
+  </xml>
+
+  <div class="text-center mt-4">
+    <button class="btn btn-success" onclick="generateCode()">Generate Python Code</button>
+    <button class="btn btn-primary ms-2" onclick="runCode()">Run Code</button>
+  </div>
+
+  <div class="input-group mt-2" style="max-width:520px; margin-left:auto; margin-right:auto;">
+    <span class="input-group-text">Title</span>
+    <input id="blockly-title" class="form-control" placeholder="e.g., While loop demo">
+  </div>
+
+  <div class="row mt-4 g-4">
+    <div class="col-lg-7">
+      <h5>🔎 Generated Python Code:</h5>
+      <pre id="codeArea" class="bg-white p-3 rounded shadow-sm" style="min-height: 200px;"></pre>
+      <h5 class="mt-3">Output:</h5>
+      <pre id="outputArea" class="bg-light p-3 rounded shadow-sm" style="min-height: 120px;"></pre>
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-outline-secondary" onclick="saveCode()">💾 Save</button>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">History</div>
+        <div class="list-group list-group-flush" id="history"></div>
+        <div class="card-footer">
+          <button class="btn btn-sm btn-outline-primary" onclick="loadHistory()">Refresh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'footer.html' %}
+
+<script src="/static/blockly/blockly_compressed.js"></script>
+<script src="/static/blockly/blocks_compressed.js"></script>
+<script src="/static/blockly/python_compressed.js"></script>
+<script src="/static/blockly/msg/en.js"></script>
+
+<script>
+  function setStatus(msg, ok=true){ const el=document.getElementById('status'); el.textContent=msg||''; el.className='small '+(ok?'text-success':'text-danger'); }
+
+  const workspace = Blockly.inject('blocklyDiv', {
+    toolbox: document.getElementById('toolbox'), scrollbars: true, trashcan: true
+  });
+
+  function generateCode() {
+    const code = Blockly.Python.workspaceToCode(workspace);
+    document.getElementById('codeArea').textContent = code || "No blocks arranged yet.";
+    const firstLine = (code || '').split('\n').find(l => l.trim()) || '';
+    const titleEl = document.getElementById('blockly-title');
+    if (!titleEl.value.trim() && firstLine) titleEl.value = firstLine.slice(0, 60);
+  }
+
+  function runCode() {
+    const code = Blockly.Python.workspaceToCode(workspace);
+    fetch('/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    })
+    .then(res => res.json())
+    .then(data => { document.getElementById('outputArea').textContent = data.output || "No output."; })
+    .catch(err => { document.getElementById('outputArea').textContent = "Error: " + err; });
+  }
+
+  async function saveCode() {
+    const code = document.getElementById('codeArea').textContent.trim();
+    if (!code) { setStatus('No code to save', false); return; }
+    const title = document.getElementById('blockly-title').value.trim() || 'Blockly code';
+    const res = await fetch('/api/save_work', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature: 'blockly', title, payload: { code } })
+    });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Save failed', false); return; }
+    setStatus('Saved'); loadHistory();
+  }
+
+  async function loadHistory() {
+    const list = document.getElementById('history');
+    list.innerHTML = '<div class="list-group-item text-muted">Loading…</div>';
+    const res = await fetch('/api/work?feature=blockly&limit=50');
+    const data = await res.json();
+    if (!res.ok) { list.innerHTML = '<div class="list-group-item text-danger">Failed to load history</div>'; return; }
+    if (!data.items || !data.items.length) { list.innerHTML = '<div class="list-group-item">No saved code</div>'; return; }
+    list.innerHTML = '';
+    for (const item of data.items) {
+      const when = (item.updated_at || item.created_at || '').replace('T',' ').slice(0,19);
+      let payload; try { payload = JSON.parse(item.payload); } catch { payload = {}; }
+      const preview = (payload.code || '').split('\n').slice(0,3).join('\n').replace(/</g,'&lt;');
+      const title = (item.title || 'Untitled').replace(/</g,'&lt;');
+      list.innerHTML += `
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="small">
+              <div class="fw-semibold">${title} <span class="text-muted">(#${item.id})</span></div>
+              <div class="text-muted">${when}</div>
+              <pre class="mb-2" style="white-space:pre-wrap;">${preview}</pre>
+            </div>
+            <div class="ms-2 d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary" onclick="loadOne(${item.id})">Load</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteOne(${item.id})">Delete</button>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  async function loadOne(id) {
+    setStatus('');
+    const res = await fetch(`/api/work/${id}`);
+    const data = await res.json();
+    if (!res.ok) { setStatus('Load failed', false); return; }
+    let payload; try { payload = JSON.parse(data.payload); } catch { payload = null; }
+    if (!payload || !payload.code) { setStatus('Saved data unreadable', false); return; }
+    document.getElementById('codeArea').textContent = payload.code;
+    document.getElementById('blockly-title').value = data.title || '';
+    setStatus(`Loaded #${id}`);
+  }
+
+  async function deleteOne(id) {
+    const res = await fetch(`/api/work/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Delete failed', false); return; }
+    setStatus(`Deleted #${id}`);
+    loadHistory();
+  }
+
+  window.addEventListener('DOMContentLoaded', loadHistory);
+</script>

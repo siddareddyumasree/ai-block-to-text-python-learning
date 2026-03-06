@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Run Python Code - AI Learning</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/pyodide/pyodide.js"></script>
+    <script src="/static/js/run_code.js" defer></script>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-container">
+            <div class="logo">AI Learning</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/blockly">Blockly Editor</a>
+                <a href="/run">Run Python Code</a>
+                <a href="/chatbot">Ask AI Chatbot</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1>Run Python Code</h1>
+
+        <div class="editor-section">
+            <textarea id="python-code" placeholder="Write your Python code here..." rows="10" cols="80"></textarea>
+            <br><br>
+            <button onclick="runPythonCode()">Run Code</button>
+        </div>
+
+        <div class="output-section">
+            <h2>Output:</h2>
+            <div id="output" class="output-box"></div>
+        </div>
+    </div>
+
+</body>
+</html>

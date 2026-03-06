@@ -1,0 +1,47 @@
+{% include 'header.html' %}
+
+<div class="container" style="max-width: 520px;">
+  <h1 class="mb-4">Create  Account</h1>
+  <div class="mb-3">
+    <label class="form-label">Name</label>
+    <input id="name" class="form-control" placeholder="Your full name">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Grade (optional)</label>
+    <input id="grade" class="form-control" placeholder="e.g., Year 8">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Email</label>
+    <input id="email" type="email" class="form-control" placeholder="Enter you email here..">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Password</label>
+    <input id="password" type="password" class="form-control" placeholder="Enter password here..">
+  </div>
+  <button class="btn btn-success w-100" onclick="submitRegister()">Register</button>
+  <div id="msg" class="mt-3 text-danger"></div>
+  <p class="mt-3">Already have an account? <a href="/login">Log in</a></p>
+</div>
+
+<script>
+async function submitRegister() {
+  const body = {
+    name: document.getElementById('name').value.trim(),
+    grade: document.getElementById('grade').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('password').value
+  };
+  const res = await fetch('/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById('msg').textContent = data.error || 'Registration failed';
+    return;
+  }
+  // after register, go to login
+  window.location.href = '/login';
+}
+</script>

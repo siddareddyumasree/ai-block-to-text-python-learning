@@ -1,0 +1,25 @@
+{% include 'header.html' %}
+
+<!-- Main Content -->
+<div class="container mt-5">
+  <h2 class="text-center mb-4">✏️ Python Code Editor</h2>
+
+  <div class="mb-3">
+    <label for="python-code" class="form-label">Write your Python code here:</label>
+    <textarea id="python-code" class="form-control" rows="10" placeholder="print('Hello, World!')"></textarea>
+  </div>
+
+  <div class="text-center mb-4">
+    <button class="btn btn-success" onclick="runPythonCode()">▶️ Run Code</button>
+  </div>
+
+  <div class="mb-5">
+    <h4>🔎 Output:</h4>
+    <div id="output" class="bg-white p-3 rounded shadow-sm" style="min-height: 100px;"></div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="/static/pyodide/pyodide.js"></script>  
+<script src="/static/js/run_code.js"></script>
+

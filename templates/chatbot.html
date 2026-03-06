@@ -1,0 +1,205 @@
+{% include 'header.html' %}
+
+<link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+
+<div class="container mt-5">
+  <h2 class="text-center mb-4">🖥️  AI Python Chatbot Assistant</h2>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="input-group">
+        <input type="text" id="user-input" class="form-control" placeholder=" Ask Questions Here...">
+        <button class="btn btn-success" onclick="sendMessage()">Ask AI</button>
+      </div>
+
+      <div class="input-group mt-2" style="max-width:520px;">
+        <span class="input-group-text">Title</span>
+        <input id="chat-title" class="form-control" placeholder="Enter your chat title here..">
+      </div>
+
+      <div id="status" class="mt-2 small"></div>
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-outline-secondary" onclick="saveChat()">✅ Save chat</button>
+      </div>
+
+      <div class="d-flex flex-column chat-container mt-3" id="chat-container"></div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">History</div>
+        <div class="list-group list-group-flush" id="history"></div>
+        <div class="card-footer">
+          <button class="btn btn-sm btn-outline-primary" onclick="loadHistory()">Refresh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'footer.html' %}
+
+<script>
+  let chatLog = []; // {role, html, text}
+
+  function setStatus(msg, ok=true) {
+    const el = document.getElementById('status');
+    el.textContent = msg || '';
+    el.className = 'mt-2 small ' + (ok ? 'text-success' : 'text-danger');
+    if (!msg) el.className = 'mt-2 small';
+  }
+
+  async function sendMessage() {
+    const userInput = document.getElementById('user-input').value.trim();
+    if (!userInput) return;
+    setStatus('');
+
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML += `
+      <div class="d-flex justify-content-end mb-2">
+        <div class="position-relative">
+          <div class="chat-bubble user-msg bg-success text-white p-2 rounded" style="max-width: 75%; word-break: break-word;">${userInput}</div>
+          <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 copy-btn" onclick="copyToClipboard(this)">📋</button>
+        </div>
+      </div>`;
+    document.getElementById('user-input').value = '';
+    chatLog.push({ role:'user', html:userInput, text:userInput });
+
+    // Suggest a title from the first user message
+    const titleEl = document.getElementById('chat-title');
+    if (!titleEl.value.trim()) titleEl.value = userInput.slice(0, 50);
+
+    const typingId = "typing-indicator";
+    chatContainer.innerHTML += `
+      <div class="d-flex justify-content-start mb-2" id="${typingId}">
+        <div class="chat-bubble bot-msg bg-light text-muted p-2 rounded" style="max-width: 75%;"> Bot is typing...</div>
+      </div>`;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    try {
+      const response = await fetch('/chatbot_response', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_message: userInput })
+      });
+      const data = await response.json();
+      const typingElement = document.getElementById(typingId);
+      if (typingElement) typingElement.remove();
+
+      chatContainer.innerHTML += `
+        <div class="d-flex justify-content-start mb-2">
+          <div class="position-relative">
+            <div class="chat-bubble bot-msg bg-white text-dark p-2 rounded" style="max-width: 75%; word-break: break-word; border: 1px solid #ccc;">${data.bot_response}</div>
+            <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 copy-btn" onclick="copyToClipboard(this)">📋</button>
+          </div>
+        </div>`;
+      Prism.highlightAll();
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      chatLog.push({ role:'assistant', html:data.bot_response, text: stripHtml(data.bot_response) });
+    } catch (e) {
+      const typingElement = document.getElementById(typingId);
+      if (typingElement) typingElement.remove();
+      chatContainer.innerHTML += `
+        <div class="d-flex justify-content-start mb-2">
+          <div class="chat-bubble bot-msg bg-danger text-white p-2 rounded" style="max-width: 75%;">⚠️ Error getting response. Please try again!</div>
+        </div>`;
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }
+
+  function copyToClipboard(button) {
+    const message = button.previousElementSibling.innerText;
+    navigator.clipboard.writeText(message).then(() => {
+      button.innerText = "Text copied";
+      setTimeout(() => { button.innerText = "📋"; }, 1500);
+    });
+  }
+
+  function stripHtml(s) {
+    const d = document.createElement('div'); d.innerHTML = s; return (d.textContent || d.innerText || '').trim();
+  }
+
+  async function saveChat() {
+    if (!chatLog.length) { setStatus('Nothing to save', false); return; }
+    const title = document.getElementById('chat-title').value.trim() || 'Chat';
+    const res = await fetch('/api/save_work', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature: 'chatbot', title, payload: { messages: chatLog } })
+    });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Save failed', false); return; }
+    setStatus('Chat saved'); loadHistory();
+  }
+
+  async function loadHistory() {
+    const list = document.getElementById('history');
+    list.innerHTML = '<div class="list-group-item text-muted">Loading…</div>';
+    const res = await fetch('/api/work?feature=chatbot&limit=50');
+    const data = await res.json();
+    if (!res.ok) { list.innerHTML = '<div class="list-group-item text-danger">Failed to load history</div>'; return; }
+    if (!data.items || !data.items.length) { list.innerHTML = '<div class="list-group-item">No saved chats yet</div>'; return; }
+    list.innerHTML = '';
+    for (const item of data.items) {
+      const when = (item.updated_at || item.created_at || '').replace('T',' ').slice(0,19);
+      const title = (item.title || 'Untitled').replace(/</g,'&lt;');
+      list.innerHTML += `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div class="small">
+            <div class="fw-semibold">${title} </div>
+            <div class="text-muted">${when}</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="loadOne(${item.id})">Load</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteOne(${item.id})">Delete</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  async function loadOne(id) {
+    setStatus('');
+    const res = await fetch(`/api/work/${id}`);
+    const data = await res.json();
+    if (!res.ok) { setStatus('Load failed', false); return; }
+    let payload; try { payload = JSON.parse(data.payload); } catch { payload = null; }
+    if (!payload || !payload.messages) { setStatus('Saved data unreadable', false); return; }
+
+    chatLog = payload.messages;
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML = '';
+    for (const m of chatLog) {
+      if (m.role === 'user') {
+        chatContainer.innerHTML += `
+          <div class="d-flex justify-content-end mb-2">
+            <div class="position-relative">
+              <div class="chat-bubble user-msg bg-success text-white p-2 rounded" style="max-width: 75%; word-break: break-word;">${m.html}</div>
+              <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 copy-btn" onclick="copyToClipboard(this)">📋</button>
+            </div>
+          </div>`;
+      } else {
+        chatContainer.innerHTML += `
+          <div class="d-flex justify-content-start mb-2">
+            <div class="position-relative">
+              <div class="chat-bubble bot-msg bg-white text-dark p-2 rounded" style="max-width: 75%; word-break: break-word; border: 1px solid #ccc;">${m.html}</div>
+              <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 copy-btn" onclick="copyToClipboard(this)">📋</button>
+            </div>
+          </div>`;
+      }
+    }
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    document.getElementById('chat-title').value = data.title || 'Chat';
+    setStatus(`Loaded #${id}`);
+  }
+
+  async function deleteOne(id) {
+    const res = await fetch(`/api/work/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Delete failed', false); return; }
+    setStatus(`Deleted #${id}`);
+    loadHistory();
+  }
+
+  window.addEventListener('DOMContentLoaded', loadHistory);
+</script>

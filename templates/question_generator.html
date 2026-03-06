@@ -1,0 +1,138 @@
+{% include 'header.html' %}
+
+<div class="container mt-5">
+  <div class="card p-4">
+    <h2 class="mb-3">Generate a Python Question</h2>
+
+    <div id="status" class="small mb-2"></div>
+
+    <div class="mb-3">
+      <label for="topic" class="form-label">Select a Python Topic:</label>
+      <select class="form-select" id="topic">
+        <option selected disabled>Choose a topic</option>
+        <option value="Variables">Variables</option>
+        <option value="Conditional statements(if-else, if, elif)">Conditional statements</option>
+        <option value="Loops">For Loops</option>
+        <option value="Functions">Functions</option>
+        <option value="Lists">Lists</option>
+        <option value="Strings">Strings</option>
+        <option value="Dictionaries">Dictionaries</option>
+        <option value="Input/Output">Input/Output</option>
+        <option value="Boolean Logic">Boolean Logic</option>
+        <option value="Arrays">Arrays</option>
+        <option value="Simple Classes and Objects">Simple Classes and Objects</option>
+      </select>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-success" onclick="generateQuestion()">Generate</button>
+      <button class="btn btn-outline-secondary" onclick="saveQuestion()">✅ Save</button>
+      <button class="btn btn-outline-primary" onclick="loadHistory()">Refresh history</button>
+    </div>
+
+    <div class="input-group mt-2" style="max-width:520px;">
+      <span class="input-group-text">Title</span>
+      <input id="q-title" class="form-control" placeholder="Enter Your title here..">
+    </div>
+
+    <div class="mt-4" id="question-display" style="display:none;">
+      <h5 class="text-primary">Your Question:</h5>
+      <p id="question-text" class="fs-5 mt-2"></p>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">History</div>
+    <div class="list-group list-group-flush" id="history"></div>
+  </div>
+</div>
+
+{% include 'footer.html' %}
+
+<script>
+  function setStatus(msg, ok=true){ const el=document.getElementById('status'); el.textContent=msg||''; el.className='small '+(ok?'text-success':'text-danger'); }
+
+  async function generateQuestion() {
+    const selectedTopic = document.getElementById('topic').value;
+    if (!selectedTopic) { setStatus('Please select a topic', false); return; }
+    setStatus('');
+    document.getElementById('question-text').innerHTML = "Generating...";
+    document.getElementById('question-display').style.display = "block";
+    const response = await fetch('/generate_question', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: selectedTopic })
+    });
+    const data = await response.json();
+    document.getElementById('question-text').innerHTML = data.question || 'No question generated.';
+    // suggest a title
+    if (!document.getElementById('q-title').value.trim()) {
+      document.getElementById('q-title').value = `${selectedTopic} – generated`;
+    }
+  }
+
+  async function saveQuestion() {
+    const q = document.getElementById('question-text').innerText.trim();
+    if (!q) { setStatus('No question to save', false); return; }
+    const title = document.getElementById('q-title').value.trim() ||
+                  (document.getElementById('topic').value || 'Question');
+    const res = await fetch('/api/save_work', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature: 'question', title, payload: { text: q } })
+    });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Save failed', false); return; }
+    setStatus('Saved');
+    loadHistory();
+  }
+
+  async function loadHistory() {
+    const list = document.getElementById('history');
+    list.innerHTML = '<div class="list-group-item text-muted">Loading…</div>';
+    const res = await fetch('/api/work?feature=question&limit=50');
+    const data = await res.json();
+    if (!res.ok) { list.innerHTML = '<div class="list-group-item text-danger">Failed to load history</div>'; return; }
+    if (!data.items || !data.items.length) { list.innerHTML = '<div class="list-group-item">No saved questions</div>'; return; }
+    list.innerHTML = '';
+    for (const item of data.items) {
+      const when = (item.updated_at || item.created_at || '').replace('T',' ').slice(0,19);
+      let payload; try { payload = JSON.parse(item.payload); } catch { payload = {}; }
+      const text = (payload.text || '').replace(/</g,'&lt;').slice(0,120);
+      const title = (item.title || 'Untitled').replace(/</g,'&lt;');
+      list.innerHTML += `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div class="small">
+            <div class="fw-semibold">${title} </div>
+            <div class="text-muted">${when}</div>
+            <div class="mt-1">${text}</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="loadOne(${item.id})">Load</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteOne(${item.id})">Delete</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  async function loadOne(id) {
+    setStatus('');
+    const res = await fetch(`/api/work/${id}`);
+    const data = await res.json();
+    if (!res.ok) { setStatus('Load failed', false); return; }
+    let payload; try { payload = JSON.parse(data.payload); } catch { payload = null; }
+    if (!payload || !payload.text) { setStatus('Saved data unreadable', false); return; }
+    document.getElementById('question-text').innerText = payload.text;
+    document.getElementById('question-display').style.display = "block";
+    document.getElementById('q-title').value = data.title || '';
+    setStatus(`Loaded #${id}`);
+  }
+
+  async function deleteOne(id) {
+    const res = await fetch(`/api/work/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || 'Delete failed', false); return; }
+    setStatus(`Deleted #${id}`);
+    loadHistory();
+  }
+
+  window.addEventListener('DOMContentLoaded', loadHistory);
+</script>
