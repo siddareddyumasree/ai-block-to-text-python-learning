@@ -182,8 +182,8 @@ Model is availabe at: https://huggingface.co/uma-siddareddy/phi-2-block-t0-text-
 ---
 
 # System Fine-tuning workflow
+<img width="295" height="628" alt="image" src="https://github.com/user-attachments/assets/55da537e-bc59-4a24-af7e-71483e40a2bc" />
 
-<img width="470" height="856" alt="image" src="https://github.com/user-attachments/assets/617eb406-5b62-40d1-8f74-b83e7e3690aa" />
 
 # Evaluation
 
@@ -215,6 +215,21 @@ Manual evaluation assessed:
 5. Code runs in the browser using Pyodide  
 6. AI chatbot provides debugging help if needed  
 7. Solutions are saved to the database
+
+
+
+
+
+<img width="454" height="217" alt="image" src="https://github.com/user-attachments/assets/3fe05d60-9b94-4b29-a52b-5b18610e4bdb" />
+
+<img width="457" height="218" alt="image" src="https://github.com/user-attachments/assets/98e08c23-170c-4204-b809-707b5a0c8140" />
+
+<img width="445" height="210" alt="image" src="https://github.com/user-attachments/assets/5bca037a-b086-46cc-82fe-01ce21a84fee" />
+
+<img width="459" height="219" alt="image" src="https://github.com/user-attachments/assets/8049961d-7e46-4c0a-a569-144fed43f08f" />
+
+<img width="454" height="216" alt="image" src="https://github.com/user-attachments/assets/2d6a97f4-38e5-4909-b8da-cf9bc9c73691" />
+
 
 
 
